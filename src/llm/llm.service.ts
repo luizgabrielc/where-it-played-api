@@ -51,9 +51,7 @@ export class LlmService {
 
     try {
       const prompt = this.buildPrompt(musicQuery);
-      console.log('prompt', prompt);
       const response = await this.callDeepseekApi(prompt);
-      console.log('response from llm', response);
       return this.parseLlmResponse(response);
     } catch (error) {
       console.error('LLM API error:', error);
@@ -87,17 +85,41 @@ export class LlmService {
     }
   }
 
-  private buildPrompt(musicQuery: string): string {
+  private buildPrompt(musicQuery: string): string {    
     const prompt = `
-    List ONLY the names of movies, TV series, or telenovelas where the song '${musicQuery}' was used.
-    1. Language: All responses must be in PORTUGUÊS (Brazil).
-    2. Format:
-       - Movies: "Filme: [Portuguese title] ([Year])" (e.g. "Filme: O Guarda-Costas (1992)"). 
-       - TV Series: "Série: [Portuguese title] (Temporada [X], Episódio [Y])" (e.g. "Série: Game of Thrones (Temporada 1, Episódio 1)").
-       - Telenovelas: "Novela: [Portuguese title] ([Year])" (e.g. "Novela: O Guarda-Costas (1992)").
-    3. Confirm that the song was actually used in the media.
-    Return ONLY a JSON in the format: { "locations": ["Media 1", "Media 2"] }.
-    IMPORTANT: Don't consider TV shows, only movies and TV series.
+    ATENÇÃO: Você é um especialista em trilhas sonoras de filmes e séries. Siga estas regras À RISCA:
+    
+    1. IDIOMA:
+       - Toda resposta DEVE SER EM PORTUGUÊS BRASILEIRO
+       - Títulos DEVE usar a versão brasileira oficial (ex: "O Guarda-Costas", não "The Bodyguard")
+    
+    2. FORMATO EXATO:
+       - Filmes: "Filme: [TÍTULO BRASILEIRO] ([ANO])" 
+       - Séries: "Série: [TÍTULO BRASILEIRO] (Temporada [NÚMERO], Episódio [NÚMERO])"
+       - Novelas: "Novela: [TÍTULO BRASILEIRO] ([ANO])"
+    
+    3. REGRAS DE CONTEÚDO:
+       - Incluir APENAS quando a música foi EFETIVAMENTE TOCADA na obra
+       - EXCLUIR programas de auditório, reality shows e menções indiretas
+       - EXCLUIR versões cover não-oficiais
+       - EXCLUIR videoclipes e concertos ao vivo
+    
+    4. VALIDAÇÃO:
+       - Priorize fontes confiáveis: IMDb, TMDb, créditos oficiais
+       - Se não encontrar informações confirmadas, retorne array vazio
+    
+    EXEMPLO PARA "I Will Always Love You":
+    {
+      "locations": [
+        "Filme: O Guarda-Costas (1992)",
+        "Série: Glee (Temporada 5, Episódio 3)"
+      ]
+    }
+    
+    SUA TAREFA PARA '${musicQuery}':
+    Retorne APENAS JSON válido SEM comentários no formato:
+    { "locations": ["Filme: ...", "Série: ..."] }
+    Se não encontrar resultados: { "locations": [] }
     `;
 
     return prompt;
@@ -121,12 +143,9 @@ export class LlmService {
           content: prompt,
         },
       ],
-      temperature: 0.1,
+      temperature: 0,
       max_tokens: 1000,
     });
-
-    console.log('response', response.choices[0]?.message);
-
     return response.choices[0]?.message?.content || '';
   }
 
