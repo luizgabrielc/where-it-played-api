@@ -1,0 +1,55 @@
+### Test the WhereItPlayed API
+
+### Environment Setup
+# Make sure you have these in your .env file:
+# DEEPSEEK_API_KEY=your_deepseek_api_key_here
+# DEEPSEEK_BASE_URL=https://api.deepseek.com
+# PORT=3000
+
+### 1. Test with a valid song query
+POST http://localhost:3000/api/ask-llm
+Content-Type: application/json
+
+{
+  "musicQuery": "Talking to the Moon"
+}
+
+### 2. Test with another popular song
+POST http://localhost:3000/api/ask-llm
+Content-Type: application/json
+
+{
+  "musicQuery": "Bohemian Rhapsody"
+}
+
+### 3. Test with Brazilian music
+POST http://localhost:3000/api/ask-llm
+Content-Type: application/json
+
+{
+  "musicQuery": "Garota de Ipanema"
+}
+
+### 4. Test with movie soundtrack
+POST http://localhost:3000/api/ask-llm
+Content-Type: application/json
+
+{
+  "musicQuery": "My Heart Will Go On"
+}
+
+### 5. Test with empty query (should return 400)
+POST http://localhost:3000/api/ask-llm
+Content-Type: application/json
+
+{
+  "musicQuery": ""
+}
+
+### 6. Test with whitespace-only query (should return 400)
+POST http://localhost:3000/api/ask-llm
+Content-Type: application/json
+
+{
+  "musicQuery": "   "
+} 
