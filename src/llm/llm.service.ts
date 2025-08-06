@@ -3,7 +3,16 @@ import { ConfigService } from '@nestjs/config';
 import OpenAI from 'openai';
 
 export interface LlmResponse {
-  locations: string[];
+  locations: Array<{
+    type: string;
+    title: string;
+    year: number;
+    season?: string;
+    episode?: string;
+    rating?: string;
+    image_url?: string;
+    singer?: string;
+  }>;
 }
 
 export interface LlmRequest {
@@ -86,40 +95,55 @@ export class LlmService {
   }
 
   private buildPrompt(musicQuery: string): string {    
+    console.log('musicQuery', musicQuery);
     const prompt = `
-    ATENÇÃO: Você é um especialista em trilhas sonoras de filmes e séries. Siga estas regras À RISCA:
+    ATENÇÃO: Especialista em trilhas sonoras! Siga À RISCA regras abaixo:
     
-    1. IDIOMA:
-       - Toda resposta DEVE SER EM PORTUGUÊS BRASILEIRO
-       - Títulos DEVE usar a versão brasileira oficial (ex: "O Guarda-Costas", não "The Bodyguard")
+    1. IDIOMA: Português Brasileiro (títulos BR).
     
-    2. FORMATO EXATO:
-       - Filmes: "Filme: [TÍTULO BRASILEIRO] ([ANO])" 
-       - Séries: "Série: [TÍTULO BRASILEIRO] (Temporada [NÚMERO], Episódio [NÚMERO])"
-       - Novelas: "Novela: [TÍTULO BRASILEIRO] ([ANO])"
-    
-    3. REGRAS DE CONTEÚDO:
-       - Incluir APENAS quando a música foi EFETIVAMENTE TOCADA na obra
-       - EXCLUIR programas de auditório, reality shows e menções indiretas
-       - EXCLUIR versões cover não-oficiais
-       - EXCLUIR videoclipes e concertos ao vivo
-    
-    4. VALIDAÇÃO:
-       - Priorize fontes confiáveis: IMDb, TMDb, créditos oficiais
-       - Se não encontrar informações confirmadas, retorne array vazio
-    
-    EXEMPLO PARA "I Will Always Love You":
+    2. FORMATO JSON RÁPIDO:
     {
       "locations": [
-        "Filme: O Guarda-Costas (1992)",
-        "Série: Glee (Temporada 5, Episódio 3)"
+        {
+          "type": "Filme" ou "Série" ou "Novela",
+          "title": "Título BR",
+          "year": 1994,
+          "season": "",       // APENAS séries
+          "episode": "",      // APENAS séries
+          "rating": "",       // Formato "X.Y/Z" (ex: "8.5/10")
+          "singer": ""        // Artista da versão USADA
+        }
+      ]
+    }
+    
+    3. REGRAS DE CONTEÚDO:
+       - Priorize velocidade sobre completude
+       - Preencha APENAS campos que você sabe de MEMÓRIA
+       - Para rating: Apenas se lembrar imediatamente
+       - Para singer: Apenas se for diferente do artista original
+       - NUNCA pesquise durante a resposta
+    
+    4. FONTES:
+       - Use apenas seu conhecimento pré-treinado
+       - Ignore validação em APIs externas
+    
+    5. EXEMPLO RÁPIDO:
+    {
+      "locations": [
+        {
+          "type": "Filme",
+          "title": "O Guarda-Costas",
+          "year": 1992,
+          "singer": "Whitney Houston"
+        }
       ]
     }
     
     SUA TAREFA PARA '${musicQuery}':
-    Retorne APENAS JSON válido SEM comentários no formato:
-    { "locations": ["Filme: ...", "Série: ..."] }
-    Se não encontrar resultados: { "locations": [] }
+    - Máximo 3 resultados
+    - Campos vazios ("") são aceitáveis
+    - Resposta em MENOS DE 5 SEGUNDOS
+    - JSON VÁLIDO SEM comentários
     `;
 
     return prompt;
@@ -144,8 +168,10 @@ export class LlmService {
         },
       ],
       temperature: 0,
-      max_tokens: 1000,
+      max_tokens: 2000,
     });
+    console.log('content', response.choices[0]?.message?.content);
+    
     return response.choices[0]?.message?.content || '';
   }
 
@@ -193,7 +219,11 @@ export class LlmService {
       return {
         locations: parsed.locations.filter(
           (location: any) =>
-            typeof location === 'string' && location.trim().length > 0,
+            location && 
+            typeof location === 'object' && 
+            location.type && 
+            location.title && 
+            location.year
         ),
       };
     } catch (error) {
